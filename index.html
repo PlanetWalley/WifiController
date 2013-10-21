@@ -1,0 +1,140 @@
+ <html>
+ 	<head>
+	    <meta charset="utf-8">
+
+		<title> Wifi Controller </title>
+		
+		
+		<style>
+			html,body{
+				width: 100%;
+				height: 100%;
+			}
+		     #container { width: 100%; height: 100%; position: absolute;left: 0%; top:0%;}
+		     #touchArea { border: 1px solid #000; position: absolute; cursor: crosshair; background: blue;}
+		    
+		</style>
+		
+		<!-- socket.io -->
+		<script src="/socket.io/socket.io.js"></script>
+
+		<!-- jquery -->
+		<!--<script src="http://code.jquery.com/jquery.js"></script>-->
+	</head>
+		
+	<body>
+		<div id='container'>
+			<!-- <p id="connect_to_server" > Connecting to server ... </p> -->
+			<canvas id="touchArea" width="1000" height="1000">
+
+			</canvas>
+		
+			
+		</div>
+		<script>
+
+		// socket connection
+		//var socket = io.connect("http://192.168.137.118:8000");
+		var socket = io.connect("http://localhost:9000/");
+
+		var last_x
+		var last_y
+		var touchArea = document.getElementById('touchArea')
+		var context = touchArea.getContext('2d')
+		var mouse_touch_position_x=[]
+		var mouse_touch_position_y=[]
+		var start = false
+
+		touchArea.width=document.getElementById('container').offsetWidth;//scrollWidth;
+		touchArea.height=document.getElementById('container').offsetHeight;//scrollHeight;
+
+		var is_touch_device='ontouchstart' in document.documentElement;
+		if(is_touch_device){
+			if(!touchArea)
+				alert("Canvas Error")
+			if(!context)
+				alert("Context Error")
+			// add touch event
+			touchArea.addEventListener('touchstart', onstart, false);
+			touchArea.addEventListener('touchmove', onmove, false);
+			touchArea.addEventListener('touchend',   onend, false);
+			    
+			// prevent elastic scrolling
+			touchArea.addEventListener('touchmove',function(event){event.preventDefault();},false);
+		}
+		else{
+			alert("it is not touch device")
+			touchArea.addEventListener('mousedown',onstart, false);
+			touchArea.addEventListener('mousemove',onmove, false);
+			touchArea.addEventListener('mouseup', onend, false);
+		}
+
+		// update current position
+
+		function getMouseOrTouchPos(canvas, evt) {            
+		  	 
+	          // get touch position of touch device
+			  if(is_touch_device){
+			  	  evt.preventDefault();
+			  	  len=evt.targetTouches.length;
+			  	  
+			  	  for (i = 0; i < len; i++) {
+				  	   mouse_touch_position_x[i] = evt.targetTouches[i].pageX -  canvas.offsetLeft;
+				  	   mouse_touch_position_y[i] = evt.targetTouches[i].pageY -  canvas.offsetTop;
+				  }
+			  				  	  
+		  	  }
+		  	  // get mouse click position
+		  	  else{
+			  	  
+			  	  if (evt.layerX || evt.layerX == 0) { // Firefox
+				      mouse_touch_position_x[0] = evt.layerX;
+				      mouse_touch_position_y[0] = evt.layerY;
+				  } else if (evt.offsetX || evt.offsetX == 0) { // Opera
+				      mouse_touch_position_x[0] = evt.offsetX;
+				      mouse_touch_position_y[0] = evt.offsetY;
+				  }
+				  
+				  
+		  	  }	        
+	        
+	      }
+
+	      function onstart(ev){
+	      	console.log("start")
+	      }
+	      function onmove(ev){
+	      	getMouseOrTouchPos(touchArea,ev)
+	      	if (start == false){
+	      		last_x = mouse_touch_position_x[0]
+	      		last_y = mouse_touch_position_y[0]
+	      		start = true
+	      		return ;
+	      	}
+			console.log("X: "+mouse_touch_position_x[0] + " Y: "+mouse_touch_position_y[0])
+			console.log("x_c: "+(mouse_touch_position_x[0]-last_x)+" y_c: "+(mouse_touch_position_y[0]-last_y))
+			var data = {}
+			data[0] = mouse_touch_position_x[0]-last_x
+			data[1] = mouse_touch_position_y[0]-last_y
+			
+			// socket emit mouse/touch move event
+			socket.emit('mouse_move', data)
+
+			// reset last_x
+			last_x = mouse_touch_position_x[0]
+			last_y = mouse_touch_position_y[0]
+	      }
+	      function onend(ev){
+	      	console.log('end')
+	      }
+
+		
+		socket.on('user_connected',function(data){
+			alert(data)
+		})
+		  
+	   
+					
+		</script>
+	</body>
+</html>
